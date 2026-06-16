@@ -196,6 +196,7 @@ html, body {
   height: 100%;
   border: none;
   display: block;
+  object-fit: cover;
 }
 
 /* Placeholder slide */
@@ -484,43 +485,13 @@ function captureVideo(src, container) {
   container.appendChild(canvas);
 }
 
-// ═══════════════════════════════════════════════════════════════
-//  VIDEO → CANVAS
-//  Los <video> visibles usan una capa nativa del SO que ignora
-//  el z-index CSS. Solución: reproducir el vídeo oculto y volcar
-//  cada frame a un <canvas> que sí respeta el stacking normal.
-// ═══════════════════════════════════════════════════════════════
-const bgVideos = new Map(); // canvas → <video>
-
 function buildVideoCanvas(src, wrap) {
   const video = document.createElement('video');
   video.src = src;
   video.loop = true; video.muted = true;
   video.playsInline = true; video.autoplay = true;
-  video.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;';
-  document.body.appendChild(video);
-
-  const canvas = document.createElement('canvas');
-  canvas.style.cssText = 'width:100%;height:100%;display:block;object-fit:cover;';
-
-  video.addEventListener('loadedmetadata', () => {
-    canvas.width  = video.videoWidth  || 1920;
-    canvas.height = video.videoHeight || 1080;
-  }, { once: true });
-
+  wrap.appendChild(video);
   video.play().catch(() => {});
-  bgVideos.set(canvas, video);
-  wrap.appendChild(canvas);
-}
-
-function videoRenderLoop() {
-  bgVideos.forEach((video, canvas) => {
-    if (canvas.width > 0 && !video.paused && !video.ended) {
-      try { canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height); }
-      catch (e) {}
-    }
-  });
-  requestAnimationFrame(videoRenderLoop);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -692,8 +663,6 @@ document.querySelectorAll('.seg-btn').forEach(btn => {
 //  INIT
 // ═══════════════════════════════════════════════════════════════
 Object.entries(SECTIONS_DATA).forEach(([id, slides]) => buildGallery(id, slides));
-
-videoRenderLoop();
 
 requestAnimationFrame(() => {
   updateIndicator(document.querySelector('.seg-btn.active'));
